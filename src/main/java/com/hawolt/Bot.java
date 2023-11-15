@@ -1,11 +1,25 @@
 package com.hawolt;
 
+import com.hawolt.data.Capability;
+import com.hawolt.data.Constant;
+import com.hawolt.data.Environment;
+import com.hawolt.events.Event;
+import com.hawolt.events.EventHandler;
+import com.hawolt.events.impl.MessageEvent;
+import com.hawolt.events.impl.UnknownEvent;
+
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Arrays;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Bot implements Handler {
+
+    private static Map<String, Function<String[], Event>> map = new HashMap<>() {{
+        put("PRIVMSG", MessageEvent::new);
+    }};
+    private static Map<Class<? extends Event>, List<EventHandler<?>>> handlers = new HashMap<>();
     private final Environment environment;
     private final Connection connection;
     private final Socket socket;
@@ -14,6 +28,13 @@ public class Bot implements Handler {
         this.environment = environment;
         this.socket = getSocket();
         this.connection = Connection.connect(this);
+    }
+
+    public void register(Class<? extends Event> event, EventHandler<?> handler) {
+        if (!handlers.containsKey(event.getClass())) {
+            handlers.put(event, new LinkedList<>());
+        }
+        handlers.get(event).add(handler);
     }
 
     // create a Socket connection to the switch server
@@ -57,7 +78,22 @@ public class Bot implements Handler {
             } catch (IOException e) {
                 System.err.println("Failed to send PONG");
             }
+        } else {
+            boolean comesWithTags = line.startsWith("@");
+            String[] data = line.split(" ", comesWithTags ? 5 : 4);
+            String type = data[comesWithTags ? 2 : 1];
+            Event event = map.getOrDefault(type, UnknownEvent::new).apply(data);
+            Optional.ofNullable(handlers.get(event.getClass())).ifPresent(list -> {
+                list.forEach(handler -> handler.onEvent(
+                        cast(event)
+                ));
+            });
         }
+    }
+
+    @SuppressWarnings("all")
+    private <T> T cast(Object o) {
+        return (T) o;
     }
 
     public String getNickLine() {

@@ -1,4 +1,4 @@
-package com.hawolt;
+package com.hawolt.data;
 
 import java.util.Locale;
 
