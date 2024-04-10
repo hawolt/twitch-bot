@@ -1,23 +1,24 @@
 package com.hawolt;
 
+import com.hawolt.logger.Logger;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class Connection implements Runnable {
-    private final ExecutorService executorService =
-            Executors.newSingleThreadExecutor();
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler handler;
-    private final Socket socket;
     private final String token;
     private final Bot bot;
-
     private Future<?> future;
+    private Socket socket;
 
     private Connection(Bot bot) {
         this.token = bot.getEnvironment().get("ACCESS_TOKEN");
@@ -29,13 +30,21 @@ public class Connection implements Runnable {
     // start the connection and make sure it is not already running
     public static Connection connect(Bot bot) {
         Connection connection = new Connection(bot);
-        if (connection.future != null && !connection.future.isDone()) {
-            System.err.println("already connected");
-        } else {
-            connection.future =
-                    connection.executorService.submit(connection);
-        }
+        connection.reconnect();
         return connection;
+    }
+
+    private void reconnect() {
+        if (future != null && !future.isDone()) {
+            if (socket.isClosed()) {
+                bot.setSocket(bot.getSocket());
+                socket = bot.getSocketInstance();
+            } else {
+                Logger.error("already connected");
+            }
+        } else {
+            future = executorService.submit(this);
+        }
     }
 
     // method to send data to twitch in the correct format
@@ -51,29 +60,36 @@ public class Connection implements Runnable {
                 token,
                 "${REDACTED}"
         );
-        System.out.println("> " + message);
+
+        Logger.debug("[ws-out] {}", message);
         outputStream.flush();
     }
 
     @Override
     public void run() {
-        try (InputStream inputStream = socket.getInputStream()) {
-            // loop while we are connected to twitch
-            Traffic traffic = new Traffic();
-            while (socket.isConnected()) {
-                byte b = (byte) inputStream.read();
-                traffic.add(b);
-                // handle data received, when linebreak occurs
-                if (b == '\n') {
-                    String in = new String(
-                            traffic.get(),
-                            StandardCharsets.UTF_8
-                    );
-                    handler.onInput(in.trim());
+        do {
+            try (InputStream inputStream = socket.getInputStream()) {
+                Traffic traffic = new Traffic();
+                while (socket.isConnected()) {
+                    byte b = (byte) inputStream.read();
+                    traffic.add(b);
+                    if (b == '\n') {
+                        String in = new String(
+                                traffic.get(),
+                                StandardCharsets.UTF_8
+                        );
+                        handler.onInput(in.trim());
+                    }
                 }
+            } catch (IOException e) {
+                Logger.error(e.getMessage());
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            this.reconnect();
+            try {
+                this.bot.login();
+            } catch (IOException e) {
+                Logger.error(e.getMessage());
+            }
+        } while (!Thread.currentThread().isInterrupted());
     }
 }

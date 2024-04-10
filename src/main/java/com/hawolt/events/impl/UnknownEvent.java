@@ -1,10 +1,11 @@
 package com.hawolt.events.impl;
 
+import com.hawolt.events.BaseEvent;
 import com.hawolt.events.Event;
 
 public class UnknownEvent extends Event {
-    public UnknownEvent(String[] data) {
-        super(data);
+    public UnknownEvent(BaseEvent base) {
+        super(base);
     }
 
     @Override
