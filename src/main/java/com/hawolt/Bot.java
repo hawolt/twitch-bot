@@ -42,6 +42,10 @@ public class Bot implements Handler {
         this.connection = Connection.connect(this);
     }
 
+    public boolean isMember(String channel) {
+        return this.channels.contains(channel);
+    }
+
     public void register(Class<? extends Event> event, EventHandler<?> handler) {
         if (!handlers.containsKey(event)) {
             handlers.put(event, new LinkedList<>());
@@ -186,6 +190,9 @@ public class Bot implements Handler {
                         String.join(",", channels)
                 )
         );
+        synchronized (lock) {
+            this.channels.addAll(Arrays.asList(channels));
+        }
     }
 
     // join a twitch channel
@@ -196,6 +203,9 @@ public class Bot implements Handler {
                         channel
                 )
         );
+        synchronized (lock) {
+            this.channels.add(channel);
+        }
     }
 
     // part a twitch channel
