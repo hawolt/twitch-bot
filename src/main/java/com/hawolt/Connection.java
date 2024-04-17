@@ -7,7 +7,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -30,11 +29,11 @@ public class Connection implements Runnable {
     // start the connection and make sure it is not already running
     public static Connection connect(Bot bot) {
         Connection connection = new Connection(bot);
-        connection.reconnect();
+        connection.connect();
         return connection;
     }
 
-    private void reconnect() {
+    private void connect() {
         if (future != null && !future.isDone()) {
             if (socket.isClosed()) {
                 bot.setSocket(bot.getSocket());
@@ -44,6 +43,15 @@ public class Connection implements Runnable {
             }
         } else {
             future = executorService.submit(this);
+        }
+    }
+
+    public void reconnect() {
+        this.connect();
+        try {
+            this.bot.login();
+        } catch (IOException e) {
+            Logger.error(e.getMessage());
         }
     }
 
@@ -85,11 +93,6 @@ public class Connection implements Runnable {
                 Logger.error(e.getMessage());
             }
             this.reconnect();
-            try {
-                this.bot.login();
-            } catch (IOException e) {
-                Logger.error(e.getMessage());
-            }
         } while (!Thread.currentThread().isInterrupted());
     }
 }

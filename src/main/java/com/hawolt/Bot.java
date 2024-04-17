@@ -120,16 +120,20 @@ public class Bot implements Handler {
         } else {
             boolean comesWithTags = line.startsWith("@");
             String[] data = line.split(" ", comesWithTags ? 5 : 4);
-            String type = data[comesWithTags ? 2 : 1];
-            BaseEvent base = new BaseEvent(this, data);
-            Event event = map.getOrDefault(type, UnknownEvent::new).apply(base);
-            Optional.ofNullable(handlers.get(event.getClass())).ifPresent(list -> {
-                list.forEach(handler -> {
-                    service.execute(() -> {
-                        handler.onEvent(cast(event));
+            if (data[1].equals("RECONNECT")) {
+                connection.reconnect();
+            } else {
+                String type = data[comesWithTags ? 2 : 1];
+                BaseEvent base = new BaseEvent(this, data);
+                Event event = map.getOrDefault(type, UnknownEvent::new).apply(base);
+                Optional.ofNullable(handlers.get(event.getClass())).ifPresent(list -> {
+                    list.forEach(handler -> {
+                        service.execute(() -> {
+                            handler.onEvent(cast(event));
+                        });
                     });
                 });
-            });
+            }
         }
     }
 
