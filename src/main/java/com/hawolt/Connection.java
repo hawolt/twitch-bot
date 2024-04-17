@@ -46,9 +46,15 @@ public class Connection implements Runnable {
         }
     }
 
+    private void close() throws IOException {
+        if (socket.isClosed()) return;
+        this.socket.close();
+    }
+
     public void reconnect() {
-        this.connect();
         try {
+            this.close();
+            this.connect();
             this.bot.login();
         } catch (IOException e) {
             Logger.error(e.getMessage());
