@@ -104,6 +104,9 @@ public class Bot implements Handler {
         requestCapabilities(capabilities);
         connection.sendRAW(getPassLine());
         connection.sendRAW(getNickLine());
+    }
+
+    public void ready() throws IOException {
         for (String channel : supplier.get()) {
             join(channel);
         }
@@ -134,6 +137,8 @@ public class Bot implements Handler {
             String[] data = line.split(" ", comesWithTags ? 5 : 4);
             if (data[1].equals("RECONNECT")) {
                 connection.reconnect();
+            } else if (data[1].equals("376")) {
+                connection.ready();
             } else {
                 String type = data[comesWithTags ? 2 : 1];
                 BaseEvent base = new BaseEvent(this, data);
