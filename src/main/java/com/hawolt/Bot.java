@@ -16,6 +16,8 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -23,11 +25,14 @@ import java.util.stream.Collectors;
 public class Bot implements Handler {
 
     private static final Map<Class<? extends Event>, List<EventHandler<?>>> handlers = new HashMap<>();
+    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final ExecutorService service = Executors.newCachedThreadPool();
     private static final Map<String, Function<BaseEvent, Event>> map = new HashMap<>() {{
         put("PRIVMSG", MessageEvent::new);
     }};
     private final Set<String> channels = new HashSet<>();
+    private long timestamp = System.currentTimeMillis();
+    private final Object lock = new Object();
     private final Supplier<String[]> supplier;
     private final Capability[] capabilities;
     private final Environment environment;
@@ -50,6 +55,7 @@ public class Bot implements Handler {
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
+            Bot.scheduler.shutdown();
             Bot.service.shutdown();
         }
     }
@@ -106,9 +112,25 @@ public class Bot implements Handler {
         connection.sendRAW(getNickLine());
     }
 
-    public void ready() throws IOException {
+    public void ready() {
         for (String channel : supplier.get()) {
-            join(channel);
+            synchronized (lock) {
+                long current = System.currentTimeMillis();
+                long duration = current - timestamp;
+                if (duration < 0) {
+                    duration = Math.abs(duration) + 600;
+                } else if (duration < 600) {
+                    duration = 600 - duration;
+                }
+                scheduler.schedule(() -> {
+                    try {
+                        join(channel);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }, duration, TimeUnit.MILLISECONDS);
+                this.timestamp = current + duration;
+            }
         }
     }
 
@@ -200,8 +222,6 @@ public class Bot implements Handler {
                 .collect(Collectors.joining(" "));
         connection.sendRAW("CAP REQ :" + capability);
     }
-
-    private final Object lock = new Object();
 
     // join one or multiple twitch channels
     public void join(String... channels) throws IOException {
