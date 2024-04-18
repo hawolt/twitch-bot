@@ -160,7 +160,7 @@ public class Bot implements Handler {
             if (data[1].equals("RECONNECT")) {
                 connection.reconnect();
             } else if (data[1].equals("376")) {
-                connection.ready();
+                this.ready();
             } else {
                 String type = data[comesWithTags ? 2 : 1];
                 BaseEvent base = new BaseEvent(this, data);

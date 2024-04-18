@@ -66,14 +66,6 @@ public class Connection implements Runnable {
         }
     }
 
-    public void ready() {
-        try {
-            this.bot.ready();
-        } catch (IOException e) {
-            Logger.error(e.getMessage());
-        }
-    }
-
     // method to send data to twitch in the correct format
     // data needs to end with a newline character
     public void sendRAW(Object o) throws IOException {
