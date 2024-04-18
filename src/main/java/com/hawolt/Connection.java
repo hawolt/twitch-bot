@@ -14,9 +14,10 @@ import java.util.concurrent.Future;
 public class Connection implements Runnable {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler handler;
+    private boolean interrupted;
     private final String token;
-    private final Bot bot;
     private Future<?> future;
+    private final Bot bot;
     private Socket socket;
 
     private Connection(Bot bot) {
@@ -24,6 +25,10 @@ public class Connection implements Runnable {
         this.socket = bot.getSocketInstance();
         this.handler = bot;
         this.bot = bot;
+    }
+
+    public ExecutorService getExecutorService() {
+        return executorService;
     }
 
     // start the connection and make sure it is not already running
@@ -46,7 +51,7 @@ public class Connection implements Runnable {
         }
     }
 
-    private void close() throws IOException {
+    public void close() throws IOException {
         if (socket.isClosed()) return;
         this.socket.close();
     }
@@ -79,6 +84,10 @@ public class Connection implements Runnable {
         outputStream.flush();
     }
 
+    public void interrupt() {
+        this.interrupted = true;
+    }
+
     @Override
     public void run() {
         do {
@@ -98,7 +107,8 @@ public class Connection implements Runnable {
             } catch (IOException e) {
                 Logger.error(e.getMessage());
             }
+            if (interrupted) return;
             this.reconnect();
-        } while (!Thread.currentThread().isInterrupted());
+        } while (!interrupted);
     }
 }

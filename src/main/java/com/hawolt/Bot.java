@@ -42,6 +42,18 @@ public class Bot implements Handler {
         this.connection = Connection.connect(this);
     }
 
+    public void shutdown() {
+        this.connection.interrupt();
+        this.connection.getExecutorService().shutdown();
+        try {
+            this.socket.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            Bot.service.shutdown();
+        }
+    }
+
     public boolean isMember(String channel) {
         return this.channels.contains(channel);
     }
