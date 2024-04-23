@@ -113,14 +113,16 @@ public class Bot implements Handler {
     }
 
     public void ready() {
+        long delayToJoin = 900L;
+        this.timestamp = System.currentTimeMillis();
         for (String channel : supplier.get()) {
             synchronized (lock) {
                 long current = System.currentTimeMillis();
                 long duration = current - timestamp;
                 if (duration < 0) {
-                    duration = Math.abs(duration) + 600;
-                } else if (duration < 600) {
-                    duration = 600 - duration;
+                    duration = Math.abs(duration) + delayToJoin;
+                } else if (duration < delayToJoin) {
+                    duration = delayToJoin - duration;
                 }
                 scheduler.schedule(() -> {
                     try {
@@ -158,9 +160,25 @@ public class Bot implements Handler {
             boolean comesWithTags = line.startsWith("@");
             String[] data = line.split(" ", comesWithTags ? 5 : 4);
             if (data[1].equals("RECONNECT")) {
-                connection.reconnect();
-            } else if (data[1].equals("376")) {
-                this.ready();
+                try {
+                    connection.close();
+                } catch (IOException e) {
+                    Logger.debug(e.getMessage());
+                }
+            } else if (data[1].matches("\\d+")) {
+                switch (data[1]) {
+                    case "001":
+                        Logger.debug("login successful");
+                        ready();
+                    case "002":  // Ignoring all other numeric messages.
+                    case "003":
+                    case "004":
+                    case "353":  // Tells you who else is in the chat room you"re joining.
+                    case "366":
+                    case "372":
+                    case "375":
+                    case "376":
+                }
             } else {
                 String type = data[comesWithTags ? 2 : 1];
                 BaseEvent base = new BaseEvent(this, data);

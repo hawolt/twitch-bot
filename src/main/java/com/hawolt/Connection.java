@@ -62,7 +62,7 @@ public class Connection implements Runnable {
             this.connect();
             this.bot.login();
         } catch (IOException e) {
-            Logger.error(e.getMessage());
+            Logger.debug(e.getMessage());
         }
     }
 
@@ -105,7 +105,7 @@ public class Connection implements Runnable {
                     }
                 }
             } catch (IOException e) {
-                Logger.error(e.getMessage());
+                Logger.debug(e.getMessage());
             }
             if (interrupted) return;
             this.reconnect();
