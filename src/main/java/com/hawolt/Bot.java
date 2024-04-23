@@ -166,19 +166,8 @@ public class Bot implements Handler {
                     Logger.debug(e.getMessage());
                 }
             } else if (data[1].matches("\\d+")) {
-                switch (data[1]) {
-                    case "001":
-                        Logger.debug("login successful");
-                        ready();
-                    case "002":  // Ignoring all other numeric messages.
-                    case "003":
-                    case "004":
-                    case "353":  // Tells you who else is in the chat room you"re joining.
-                    case "366":
-                    case "372":
-                    case "375":
-                    case "376":
-                }
+                Logger.debug("numeric {}", data[1]);
+                if (data[1].equals("001")) ready();
             } else {
                 String type = data[comesWithTags ? 2 : 1];
                 BaseEvent base = new BaseEvent(this, data);
