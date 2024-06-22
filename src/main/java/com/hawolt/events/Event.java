@@ -12,6 +12,10 @@ public abstract class Event {
         this.bot = base.bot();
     }
 
+    public Bot getBot() {
+        return bot;
+    }
+
     public abstract String getType();
 
     public long getTimestamp() {
