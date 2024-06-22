@@ -1,5 +1,6 @@
-package com.hawolt;
+package com.hawolt.test;
 
+import com.hawolt.Bot;
 import com.hawolt.data.Capability;
 import com.hawolt.data.Environment;
 import com.hawolt.events.Event;
@@ -31,8 +32,6 @@ public class Main {
                     System.err.println(event.getMessage());
                 }
             });
-
-            bot.join("hawolt");
         } catch (IOException e) {
             System.err.println("Failed to connect: " + e.getMessage());
         }
